@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LectureAI — Smart Notes from Any Lecture</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      color: #888;
+      font-size: 1rem;
+    }
+
+    .card {
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 24px;
+    }
+
+    .upload-zone {
+      border: 2px dashed #3a3a50;
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: #a78bfa;
+      background: rgba(167, 139, 250, 0.05);
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .upload-zone h3 {
+      font-size: 1.1rem;
+      color: #c4c4d4;
+      margin-bottom: 6px;
+    }
+
+    .upload-zone p {
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    #file-name {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: #a78bfa;
+      display: none;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 20px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      color: white;
+    }
+
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .status-bar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+      padding: 14px 16px;
+      background: rgba(167, 139, 250, 0.08);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      color: #a78bfa;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(167, 139, 250, 0.3);
+      border-top-color: #a78bfa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .results { display: none; }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } }
+
+    .summary-box {
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .summary-box h4 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+
+    .summary-box ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .summary-box ul li {
+      font-size: 0.88rem;
+      color: #c4c4d4;
+      padding: 4px 0;
+      border-bottom: 1px solid #1e1e2a;
+      line-height: 1.5;
+    }
+
+    .summary-box ul li:last-child { border-bottom: none; }
+
+    .summary-box ul li::before {
+      content: '→ ';
+      color: #a78bfa;
+      font-size: 0.8rem;
+    }
+
+    .transcript-box {
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      padding: 20px;
+      max-height: 280px;
+      overflow-y: auto;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: #b0b0c4;
+    }
+
+    .transcript-box::-webkit-scrollbar { width: 6px; }
+    .transcript-box::-webkit-scrollbar-track { background: transparent; }
+    .transcript-box::-webkit-scrollbar-thumb { background: #3a3a50; border-radius: 3px; }
+
+    .copy-btn {
+      background: #2a2a3a;
+      color: #c4c4d4;
+      border: 1px solid #3a3a50;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      float: right;
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover { background: #3a3a50; }
+
+    .error-box {
+      display: none;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: #fca5a5;
+      font-size: 0.88rem;
+      margin-top: 16px;
+    }
+
+    .api-key-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      color: #e8e8f0;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    .api-key-input:focus { border-color: #a78bfa; }
+
+    .api-key-input::placeholder { color: #444; }
+
+    .label {
+      font-size: 0.82rem;
+      color: #888;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #2a2a3a;
+      margin: 24px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>LectureAI</h1>
+    <p>Upload any lecture or meeting recording — get smart notes instantly.</p>
+  </header>
+
+  <!-- API Key Card -->
+  <div class="card">
+    <div style="margin-bottom:20px;">
+      <label class="label">AssemblyAI API Key — free at <a href="https://www.assemblyai.com/dashboard/signup" target="_blank" style="color:#a78bfa;">assemblyai.com</a> (for transcription + speaker detection)</label>
+      <input type="password" id="assembly-key" class="api-key-input" placeholder="your assemblyai key..." />
+    </div>
+    <div>
+      <label class="label">Groq API Key — free at <a href="https://console.groq.com/keys" target="_blank" style="color:#a78bfa;">console.groq.com</a> (for smart notes)</label>
+      <input type="password" id="api-key" class="api-key-input" placeholder="gsk_..." />
+    </div>
+    <p style="font-size:0.78rem; color:#555; margin-top:8px;">Both are free — no credit card needed.</p>
+  </div>
+
+  <!-- Upload Card -->
+  <div class="card">
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="audio-file" accept="audio/*,video/mp4,.m4a,.mp3,.wav,.webm,.ogg" />
+      <div class="upload-icon">🎙️</div>
+      <h3>Drop your recording here</h3>
+      <p>MP3, MP4, M4A, WAV, WEBM — up to 2 hours</p>
+      <p id="file-name"></p>
+    </div>
+
+    <button class="btn btn-primary" id="process-btn" disabled>Generate Notes</button>
+
+    <div class="status-bar" id="status-bar">
+      <div class="spinner"></div>
+      <span id="status-text">Uploading...</span>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="card results" id="results">
+    <p class="section-title">Summary</p>
+    <div class="summary-grid" id="summary-grid"></div>
+    <hr class="divider" />
+    <p class="section-title">Full Transcript <button class="copy-btn" id="copy-btn">Copy</button></p>
+    <div class="transcript-box" id="transcript-box"></div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('audio-file');
+    const uploadZone = document.getElementById('upload-zone');
+    const processBtn = document.getElementById('process-btn');
+    const statusBar = document.getElementById('status-bar');
+    const statusText = document.getElementById('status-text');
+    const errorBox = document.getElementById('error-box');
+    const results = document.getElementById('results');
+    const fileNameEl = document.getElementById('file-name');
+    const apiKeyInput = document.getElementById('api-key');
+    const assemblyKeyInput = document.getElementById('assembly-key');
+
+    // Drag and drop
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) {
+        fileInput.files = e.dataTransfer.files;
+        onFileSelected();
+      }
+    });
+
+    fileInput.addEventListener('change', onFileSelected);
+
+    function onFileSelected() {
+      const file = fileInput.files[0];
+      if (file) {
+        fileNameEl.style.display = 'block';
+        fileNameEl.textContent = `✓ ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+        processBtn.disabled = false;
+      }
+    }
+
+    processBtn.addEventListener('click', async () => {
+      const apiKey = apiKeyInput.value.trim();
+      const file = fileInput.files[0];
+
+      const assemblyKey = assemblyKeyInput.value.trim();
+      if (!assemblyKey) return showError('Please enter your AssemblyAI API key.');
+      if (!apiKey) return showError('Please enter your Groq API key.');
+      if (!file) return showError('Please select an audio file.');
+
+      setLoading(true, 'Uploading audio... (do not close this tab)');
+      hideError();
+      results.style.display = 'none';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('http://localhost:5000/transcribe', {
+          method: 'POST',
+          headers: {
+            'X-Assembly-Key': assemblyKey,
+            'X-Groq-Key': apiKey
+          },
+          body: formData
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Something went wrong');
+        }
+
+        const { transcript, summary } = await res.json();
+
+        setLoading(true, 'Generating smart notes with AI...');
+
+        // Step 2: Summarize with Groq's LLM (llama-3.3-70b — free)
+        const summaryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{
+              role: 'system',
+              content: `You are a student study assistant. Analyze lecture transcripts and return a JSON object with exactly these keys:
+- "key_points": array of 5-7 most important points from the lecture (strings)
+- "important_terms": array of 5-8 key terms or concepts with brief definitions (strings like "Term: definition")
+- "exam_questions": array of 4-5 likely exam questions based on the content (strings)
+- "one_liner": a single sentence summary of the entire lecture
+
+Return ONLY valid JSON, no markdown, no extra text.`
+            }, {
+              role: 'user',
+              content: `Here is the lecture transcript:\n\n${transcript.substring(0, 12000)}`
+            }],
+            temperature: 0.3
+          })
+        });
+
+        if (!summaryRes.ok) {
+          const err = await summaryRes.json();
+          throw new Error(err.error?.message || 'Summary generation failed');
+        }
+
+        const summaryData = await summaryRes.json();
+        const rawContent = summaryData.choices[0].message.content;
+        const summary = JSON.parse(rawContent);
+
+        setLoading(false);
+        displayResults(transcript, summary);
+
+      } catch (err) {
+        setLoading(false);
+        showError(err.message || 'Something went wrong. Make sure server.py is running.');
+      }
+    });
+
+    function displayResults(transcript, summary) {
+      const grid = document.getElementById('summary-grid');
+      grid.innerHTML = '';
+
+      const sections = [
+        { title: '📌 Key Points', items: summary.key_points },
+        { title: '📚 Important Terms', items: summary.important_terms },
+        { title: '❓ Likely Exam Questions', items: summary.exam_questions },
+      ];
+
+      sections.forEach(s => {
+        const box = document.createElement('div');
+        box.className = 'summary-box';
+        if (s.title.includes('Exam')) box.style.gridColumn = '1 / -1';
+        box.innerHTML = `<h4>${s.title}</h4><ul>${(s.items || []).map(i => `<li>${i}</li>`).join('')}</ul>`;
+        grid.appendChild(box);
+      });
+
+      if (summary.one_liner) {
+        const oneLiner = document.createElement('div');
+        oneLiner.style.cssText = 'background:#12121a;border:1px solid #2a2a3a;border-radius:10px;padding:16px;margin-bottom:16px;font-size:0.9rem;color:#c4c4d4;line-height:1.6;';
+        oneLiner.innerHTML = `<span style="color:#a78bfa;font-weight:600;">TL;DR: </span>${summary.one_liner}`;
+        grid.parentNode.insertBefore(oneLiner, grid);
+      }
+
+      document.getElementById('transcript-box').textContent = transcript;
+      results.style.display = 'block';
+      results.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const text = document.getElementById('transcript-box').textContent;
+      navigator.clipboard.writeText(text);
+      document.getElementById('copy-btn').textContent = 'Copied!';
+      setTimeout(() => document.getElementById('copy-btn').textContent = 'Copy', 2000);
+    });
+
+    function setLoading(on, msg = '') {
+      statusBar.style.display = on ? 'flex' : 'none';
+      statusText.textContent = msg;
+      processBtn.disabled = on;
+    }
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = 'block';
+    }
+
+    function hideError() {
+      errorBox.style.display = 'none';
+    }
+  </script>
+</body>
+</html>

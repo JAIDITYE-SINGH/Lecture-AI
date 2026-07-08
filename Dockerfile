@@ -7,4 +7,4 @@ COPY server.js .
 COPY prisma ./prisma
 RUN npx prisma generate
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD npx prisma migrate deploy && node server.js

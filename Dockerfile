@@ -1,5 +1,6 @@
 FROM node:20-alpine
-RUN apk add --no-cache openssl
+# Force rebuild v2
+RUN apk add --no-cache opensslRUN apk add --no-cache openssl
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production

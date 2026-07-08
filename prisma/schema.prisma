@@ -1,0 +1,20 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Lecture {
+  id               Int     @id @default(autoincrement())
+  title            String
+  transcript       String
+  summary          String?
+  keyPoints        String? // New
+  probableQuestions String? // New
+  questionsForLecturer String? // New
+  importantWords   String? // New
+  createdAt        DateTime @default(now())
+}

@@ -1,6 +1,6 @@
 [phases.setup]
 nixPkgs = ['nodejs_20']
+onlyIncludeFiles = ['server.js', 'package.json', 'package-lock.json', 'prisma']
 
 [start]
 cmd = 'node server.js'
-
